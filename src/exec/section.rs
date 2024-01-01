@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 
 use crate::exec::buffer::Buffer;
+use crate::exec::code_section::CodeSectionNode;
 use crate::exec::func_section::FunctionSectionNode;
 use crate::exec::type_section::TypeSectionNode;
 
@@ -8,6 +9,7 @@ use crate::exec::type_section::TypeSectionNode;
 pub enum SectionNode {
     TypeSectionNode,
     FunctionSectionNode,
+    CodeSectionNode,
 }
 
 impl SectionNode {
@@ -23,7 +25,7 @@ impl SectionNode {
             // 7 => ExportSectionNode::new(),
             // 8 => StartSectionNode::new(),
             // 9 => ElementSectionNode::new(),
-            // 10 => CodeSectionNode::new(),
+            10 => Ok(SectionNode::CodeSectionNode),
             // 11 => DataSectionNode::new(),
             _ => Err(anyhow!("Invalid section id: {:?}", section_id)),
         }
@@ -38,6 +40,10 @@ impl SectionNode {
             SectionNode::FunctionSectionNode => {
                 let mut function_section = FunctionSectionNode::new();
                 function_section.load(buf)?;
+            }
+            SectionNode::CodeSectionNode => {
+                let mut code_section = CodeSectionNode::new();
+                code_section.load(buf)?;
             }
         }
         Ok(())

@@ -1,30 +1,20 @@
 use anyhow::Result;
-use clap::Parser;
 use std::fs;
 use std::io::ErrorKind;
+use std::path::PathBuf;
 
 use crate::errors::ExecError;
 use crate::exec::buffer::Buffer;
 use crate::exec::module::ModuleNode;
 
-/// Run a wasm file.
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Args {
-    /// Name of the wasm file to run.
-    #[arg(short, long)]
-    file: String,
-}
-
-pub fn exec() -> Result<()> {
-    let args = Args::parse();
-
-    let file = fs::read(&args.file);
+pub fn exec(path: PathBuf) -> Result<ModuleNode> {
+    let file = fs::read(&path);
     let file_content = match file {
         Ok(file) => file,
         Err(e) => {
             if e.kind() == ErrorKind::NotFound {
-                return Err(ExecError::FileNotFound(args.file).into());
+                let p = path.file_name().unwrap().to_string_lossy().into_owned();
+                return Err(ExecError::FileNotFound(p).into());
             }
             eprintln!("Unknown error: {}", e);
             return Err(ExecError::Unknown.into());
@@ -35,7 +25,24 @@ pub fn exec() -> Result<()> {
     let mut module = ModuleNode::new();
     module.load(&mut buffer)?;
 
-    println!("{:?}", module);
+    println!("{:#?}", module);
 
-    return Ok(());
+    return Ok(module);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn test_exec() {
+        let path = PathBuf::from("examples/const.wasm");
+        let result = exec(path);
+        assert!(result.is_ok());
+
+        let module = result.unwrap();
+
+        assert!(module.sections.len() == 3);
+    }
 }

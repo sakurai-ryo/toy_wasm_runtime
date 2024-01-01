@@ -6,15 +6,19 @@ use crate::exec::section::SectionNode;
 #[derive(Debug)]
 pub struct ModuleNode {
     /// https://webassembly.github.io/spec/core/binary/modules.html#binary-magic
-    magic: Vec<u8>,
+    pub magic: Vec<u8>,
 
     /// https://webassembly.github.io/spec/core/binary/modules.html#binary-version
-    version: Vec<u8>,
+    pub version: Vec<u8>,
 
     /// https://webassembly.github.io/spec/core/binary/modules.html#sections
-    sections: Vec<SectionNode>,
+    pub sections: Vec<SectionNode>,
 }
-
+impl Default for ModuleNode {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl ModuleNode {
     pub fn new() -> ModuleNode {
         ModuleNode {
@@ -37,21 +41,21 @@ impl ModuleNode {
                 break;
             }
 
-            // let section =
+            let section = self.load_section(buf)?;
+            self.sections.push(section);
         }
 
         Ok(())
     }
 
-    pub fn load_section(&mut self, buf: &mut Buffer) -> Result<()> {
+    pub fn load_section(&mut self, buf: &mut Buffer) -> Result<SectionNode> {
         let section_id = buf.read_byte()?;
         let section_size = buf.read_u32()?;
-        let section_buf = buf.read_buffer(section_size)?;
+        let mut section_buf = buf.read_buffer(section_size)?;
 
         let section = SectionNode::create(section_id)?;
-        section.load(buf)?;
-        self.sections.push(section);
+        section.load(&mut section_buf)?;
 
-        Ok(())
+        Ok(section)
     }
 }
