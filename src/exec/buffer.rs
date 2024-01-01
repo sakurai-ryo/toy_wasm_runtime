@@ -2,9 +2,11 @@ use anyhow::{anyhow, Result};
 
 #[derive(Debug)]
 pub struct Buffer {
-    cursor: i64,
+    cursor: u32,
     buf: Vec<u8>,
 }
+
+type ReadVecFn<T> = Box<dyn Fn(&mut Buffer) -> Result<T>>;
 
 impl Buffer {
     pub fn new(buf: Vec<u8>) -> Buffer {
@@ -16,7 +18,7 @@ impl Buffer {
     }
 
     pub fn eof(&self) -> bool {
-        self.cursor >= self.byte_len() as i64
+        self.cursor >= self.byte_len() as u32
     }
 
     pub fn read_byte(&mut self) -> Result<u8> {
@@ -24,8 +26,8 @@ impl Buffer {
         Ok(buf_slice[0])
     }
 
-    pub fn read_bytes(&mut self, size: i64) -> Result<Vec<u8>> {
-        if (self.buf.len() as i64) < (self.cursor + size) {
+    pub fn read_bytes(&mut self, size: u32) -> Result<Vec<u8>> {
+        if (self.buf.len() as u32) < (self.cursor + size) {
             return Err(anyhow!("Buffer too small"));
         }
 
@@ -34,7 +36,7 @@ impl Buffer {
         Ok(slice)
     }
 
-    pub fn read_buffer(&mut self, size: i64) -> Result<Buffer> {
+    pub fn read_buffer(&mut self, size: u32) -> Result<Buffer> {
         let buf_slice = self.read_bytes(size)?;
         Ok(Buffer::new(buf_slice))
     }
@@ -75,11 +77,11 @@ impl Buffer {
         }
     }
 
-    pub fn read_vec<T>(&mut self, f: fn() -> Result<T>) -> Result<Vec<T>> {
+    pub fn read_vec<T>(&mut self, f: ReadVecFn<T>) -> Result<Vec<T>> {
         let mut vec = Vec::new();
         let size = self.read_u32()?;
         for _ in 0..size {
-            vec.push(f()?);
+            vec.push(f(self)?);
         }
         Ok(vec)
     }

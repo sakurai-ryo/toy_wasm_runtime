@@ -12,7 +12,7 @@ pub struct ModuleNode {
     version: Vec<u8>,
 
     /// https://webassembly.github.io/spec/core/binary/modules.html#sections
-    sections: Vec<Box<dyn SectionNode>>,
+    sections: Vec<SectionNode>,
 }
 
 impl ModuleNode {
@@ -48,7 +48,7 @@ impl ModuleNode {
         let section_size = buf.read_u32()?;
         let section_buf = buf.read_buffer(section_size)?;
 
-        let section = SectionNode::create(section_id);
+        let section = SectionNode::create(section_id)?;
         section.load(buf)?;
         self.sections.push(section);
 
