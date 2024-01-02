@@ -351,7 +351,9 @@ impl I32RemsIntrinsicNode {
     }
 }
 
-pub type S33 = u32;
+// In WebAssembly, S33 represents a signed 33-bit integer.
+// However, for simplicity, representing it as a signed 32-bit integer here.
+pub type S33 = i32;
 
 #[derive(Debug, Clone)]
 pub enum BlockType {
