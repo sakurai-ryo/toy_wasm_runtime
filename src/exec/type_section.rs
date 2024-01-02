@@ -110,7 +110,7 @@ impl FunctionTypeNode {
     pub fn load(&mut self, buf: &mut Buffer) -> Result<()> {
         let byte = buf.read_byte()?;
         if byte != self.tag() {
-            return Err(anyhow!("Invalid function type"));
+            return Err(anyhow!("Invalid function type: {}", byte));
         }
 
         self.param_type.load(buf)?;
@@ -139,7 +139,7 @@ impl ResultTypeNode {
     pub fn load(&mut self, buf: &mut Buffer) -> Result<()> {
         let f = |buf: &mut Buffer| -> Result<ValType> {
             let byte = buf.read_byte()?;
-            ValType::from_u8(byte).ok_or(anyhow!("Invalid value type"))
+            ValType::from_u8(byte).ok_or(anyhow!("Invalid value type: {}", byte))
         };
         self.val_types = buf.read_vec::<ValType>(Box::new(f))?;
 

@@ -16,7 +16,6 @@ pub fn exec(path: PathBuf) -> Result<ModuleNode> {
                 let p = path.file_name().unwrap().to_string_lossy().into_owned();
                 return Err(ExecError::FileNotFound(p).into());
             }
-            eprintln!("Unknown error: {}", e);
             return Err(ExecError::Unknown.into());
         }
     };

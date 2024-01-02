@@ -118,7 +118,9 @@ impl LocalNode {
 
     pub fn load(&mut self, buf: &mut Buffer) -> Result<()> {
         self.num = buf.read_u32()?;
-        self.val_type = ValType::from_u8(buf.read_byte()?).ok_or(anyhow!("Invalid value type"))?;
+        let val_type = buf.read_byte()?;
+        self.val_type =
+            ValType::from_u8(val_type).ok_or(anyhow!("Invalid value type: {}", val_type))?;
         Ok(())
     }
 }
