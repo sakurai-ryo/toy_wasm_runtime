@@ -162,6 +162,10 @@ pub enum Op {
     I32Rems = 0x6f,
     If = 0x04,
     Else = 0x05,
+    Block = 0x02,
+    Loop = 0x03,
+    Br = 0x0c,
+    BrIf = 0x0d,
     End = 0x0b,
 }
 impl Op {
@@ -177,6 +181,10 @@ impl Op {
             0x6f => Some(Op::I32Rems),
             0x04 => Some(Op::If),
             0x05 => Some(Op::Else),
+            0x02 => Some(Op::Block),
+            0x03 => Some(Op::Loop),
+            0x0c => Some(Op::Br),
+            0x0d => Some(Op::BrIf),
             0x0b => Some(Op::End),
             _ => None,
         }
@@ -194,6 +202,10 @@ pub enum IntrinsicNode {
     I32AddIntrinsicNode(I32AddIntrinsicNode),
     I32RemsIntrinsicNode(I32RemsIntrinsicNode),
     IfIntrinsicNode(IfIntrinsicNode),
+    BlockIntrinsicNode(BlockIntrinsicNode),
+    LoopIntrinsicNode(LoopIntrinsicNode),
+    BrIntrinsicNode(BrIntrinsicNode),
+    BrIfIntrinsicNode(BrIfIntrinsicNode),
 }
 impl IntrinsicNode {
     pub fn new(opcode: Op) -> IntrinsicNode {
@@ -207,6 +219,10 @@ impl IntrinsicNode {
             Op::I32Add => IntrinsicNode::I32AddIntrinsicNode(I32AddIntrinsicNode::new()),
             Op::I32Rems => IntrinsicNode::I32RemsIntrinsicNode(I32RemsIntrinsicNode::new()),
             Op::If => IntrinsicNode::IfIntrinsicNode(IfIntrinsicNode::new()),
+            Op::Block => IntrinsicNode::BlockIntrinsicNode(BlockIntrinsicNode::new()),
+            Op::Loop => IntrinsicNode::LoopIntrinsicNode(LoopIntrinsicNode::new()),
+            Op::Br => IntrinsicNode::BrIntrinsicNode(BrIntrinsicNode::new()),
+            Op::BrIf => IntrinsicNode::BrIfIntrinsicNode(BrIfIntrinsicNode::new()),
             _ => panic!("Invalid opcode"), // TODO
         }
     }
@@ -222,6 +238,10 @@ impl IntrinsicNode {
             IntrinsicNode::I32AddIntrinsicNode(_) => Ok(()),
             IntrinsicNode::I32RemsIntrinsicNode(_) => Ok(()),
             IntrinsicNode::IfIntrinsicNode(i) => i.load(buf),
+            IntrinsicNode::BlockIntrinsicNode(b) => b.load(buf),
+            IntrinsicNode::LoopIntrinsicNode(l) => l.load(buf),
+            IntrinsicNode::BrIntrinsicNode(b) => b.load(buf),
+            IntrinsicNode::BrIfIntrinsicNode(b) => b.load(buf),
         }
     }
 }
@@ -406,6 +426,88 @@ impl IfIntrinsicNode {
             self.else_expr.load(buf)?;
         }
 
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct BlockIntrinsicNode {
+    block_type: BlockType,
+    expr: ExprNode,
+}
+impl BlockIntrinsicNode {
+    pub fn new() -> BlockIntrinsicNode {
+        BlockIntrinsicNode {
+            block_type: BlockType::Empty,
+            expr: ExprNode::new(),
+        }
+    }
+
+    pub fn load(&mut self, buf: &mut Buffer) -> Result<()> {
+        let byte = buf.read_byte()?;
+        self.block_type =
+            BlockType::from_u8(byte).ok_or(anyhow!("Invalid block type: {}", byte))?;
+
+        self.expr = ExprNode::new();
+        self.expr.load(buf)?;
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct LoopIntrinsicNode {
+    block_type: BlockType,
+    expr: ExprNode,
+}
+impl LoopIntrinsicNode {
+    pub fn new() -> LoopIntrinsicNode {
+        LoopIntrinsicNode {
+            block_type: BlockType::Empty,
+            expr: ExprNode::new(),
+        }
+    }
+
+    pub fn load(&mut self, buf: &mut Buffer) -> Result<()> {
+        let byte = buf.read_byte()?;
+        self.block_type =
+            BlockType::from_u8(byte).ok_or(anyhow!("Invalid block type: {}", byte))?;
+
+        self.expr = ExprNode::new();
+        self.expr.load(buf)?;
+
+        Ok(())
+    }
+}
+
+type LabelIdx = u32;
+
+#[derive(Debug, Clone)]
+pub struct BrIntrinsicNode {
+    label_idx: LabelIdx,
+}
+impl BrIntrinsicNode {
+    pub fn new() -> BrIntrinsicNode {
+        BrIntrinsicNode { label_idx: 0 }
+    }
+
+    pub fn load(&mut self, buf: &mut Buffer) -> Result<()> {
+        self.label_idx = buf.read_u32()?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct BrIfIntrinsicNode {
+    label_idx: LabelIdx,
+}
+impl BrIfIntrinsicNode {
+    pub fn new() -> BrIfIntrinsicNode {
+        BrIfIntrinsicNode { label_idx: 0 }
+    }
+
+    pub fn load(&mut self, buf: &mut Buffer) -> Result<()> {
+        self.label_idx = buf.read_u32()?;
         Ok(())
     }
 }

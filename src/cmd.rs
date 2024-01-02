@@ -95,4 +95,15 @@ mod tests {
 
         assert!(module.sections.len() == 4);
     }
+
+    #[test]
+    fn test_exec_loop() {
+        let path = PathBuf::from("examples/loop.wasm");
+        let result = exec(ExecInput { path, print: false });
+        assert!(result.is_ok());
+
+        let module = result.unwrap();
+
+        assert!(module.sections.len() == 4);
+    }
 }
