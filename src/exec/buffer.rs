@@ -85,6 +85,13 @@ impl Buffer {
         }
         Ok(vec)
     }
+
+    pub fn read_name(&mut self) -> Result<String> {
+        let size = self.read_u32()?;
+        let bytes = self.read_bytes(size)?;
+        let name = String::from_utf8(bytes)?;
+        Ok(name)
+    }
 }
 
 #[cfg(test)]

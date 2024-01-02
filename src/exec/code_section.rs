@@ -3,25 +3,6 @@ use anyhow::{anyhow, Result};
 use crate::exec::buffer::Buffer;
 use crate::exec::type_section::{NumType, ValType};
 
-#[derive(Debug, PartialEq, Clone)]
-pub enum Op {
-    LocalGet = 0x20,
-    LocalSet = 0x21,
-    I32Const = 0x41,
-    End = 0x0b,
-}
-impl Op {
-    pub fn from_u8(value: u8) -> Option<Op> {
-        match value {
-            0x20 => Some(Op::LocalGet),
-            0x21 => Some(Op::LocalSet),
-            0x41 => Some(Op::I32Const),
-            0x0b => Some(Op::End),
-            _ => None,
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct CodeSectionNode {
     codes: Vec<CodeNode>,
@@ -166,11 +147,45 @@ impl ExprNode {
     }
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum Op {
+    LocalGet = 0x20,
+    LocalSet = 0x21,
+    I32Const = 0x41,
+    I32Eqa = 0x45,
+    I32LtS = 0x48,
+    I32GeS = 0x4e,
+    I32Add = 0x6a,
+    I32Rems = 0x6f,
+    End = 0x0b,
+}
+impl Op {
+    pub fn from_u8(value: u8) -> Option<Op> {
+        match value {
+            0x20 => Some(Op::LocalGet),
+            0x21 => Some(Op::LocalSet),
+            0x41 => Some(Op::I32Const),
+            0x45 => Some(Op::I32Eqa),
+            0x48 => Some(Op::I32LtS),
+            0x4e => Some(Op::I32GeS),
+            0x6a => Some(Op::I32Add),
+            0x6f => Some(Op::I32Rems),
+            0x0b => Some(Op::End),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum IntrinsicNode {
     LocalGetIntrinsicNode(LocalGetIntrinsicNode),
     LocalSetIntrinsicNode(LocalSetIntrinsicNode),
     I32ConstIntrinsicNode(I32ConstIntrinsicNode),
+    I32EqaIntrinsicNode(I32EqaIntrinsicNode),
+    I32LtSIntrinsicNode(I32LtSIntrinsicNode),
+    I32GeSIntrinsicNode(I32GeSIntrinsicNode),
+    I32AddIntrinsicNode(I32AddIntrinsicNode),
+    I32RemsIntrinsicNode(I32RemsIntrinsicNode),
 }
 impl IntrinsicNode {
     pub fn new(opcode: Op) -> IntrinsicNode {
@@ -178,6 +193,11 @@ impl IntrinsicNode {
             Op::I32Const => IntrinsicNode::I32ConstIntrinsicNode(I32ConstIntrinsicNode::new()),
             Op::LocalGet => IntrinsicNode::LocalGetIntrinsicNode(LocalGetIntrinsicNode::new()),
             Op::LocalSet => IntrinsicNode::LocalSetIntrinsicNode(LocalSetIntrinsicNode::new()),
+            Op::I32Eqa => IntrinsicNode::I32EqaIntrinsicNode(I32EqaIntrinsicNode::new()),
+            Op::I32LtS => IntrinsicNode::I32LtSIntrinsicNode(I32LtSIntrinsicNode::new()),
+            Op::I32GeS => IntrinsicNode::I32GeSIntrinsicNode(I32GeSIntrinsicNode::new()),
+            Op::I32Add => IntrinsicNode::I32AddIntrinsicNode(I32AddIntrinsicNode::new()),
+            Op::I32Rems => IntrinsicNode::I32RemsIntrinsicNode(I32RemsIntrinsicNode::new()),
             _ => panic!("Invalid opcode"), // TODO
         }
     }
@@ -187,6 +207,11 @@ impl IntrinsicNode {
             IntrinsicNode::I32ConstIntrinsicNode(i) => i.load(buf),
             IntrinsicNode::LocalGetIntrinsicNode(l) => l.load(buf),
             IntrinsicNode::LocalSetIntrinsicNode(l) => l.load(buf),
+            IntrinsicNode::I32EqaIntrinsicNode(_) => Ok(()),
+            IntrinsicNode::I32LtSIntrinsicNode(_) => Ok(()),
+            IntrinsicNode::I32GeSIntrinsicNode(_) => Ok(()),
+            IntrinsicNode::I32AddIntrinsicNode(_) => Ok(()),
+            IntrinsicNode::I32RemsIntrinsicNode(_) => Ok(()),
         }
     }
 }
@@ -248,5 +273,70 @@ impl LocalSetIntrinsicNode {
     pub fn load(&mut self, buf: &mut Buffer) -> Result<()> {
         self.local_idx = buf.read_u32()?;
         Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct I32EqaIntrinsicNode {}
+impl Default for I32EqaIntrinsicNode {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl I32EqaIntrinsicNode {
+    pub fn new() -> I32EqaIntrinsicNode {
+        I32EqaIntrinsicNode {}
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct I32LtSIntrinsicNode {}
+impl Default for I32LtSIntrinsicNode {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl I32LtSIntrinsicNode {
+    pub fn new() -> I32LtSIntrinsicNode {
+        I32LtSIntrinsicNode {}
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct I32GeSIntrinsicNode {}
+impl Default for I32GeSIntrinsicNode {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl I32GeSIntrinsicNode {
+    pub fn new() -> I32GeSIntrinsicNode {
+        I32GeSIntrinsicNode {}
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct I32AddIntrinsicNode {}
+impl Default for I32AddIntrinsicNode {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl I32AddIntrinsicNode {
+    pub fn new() -> I32AddIntrinsicNode {
+        I32AddIntrinsicNode {}
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct I32RemsIntrinsicNode {}
+impl Default for I32RemsIntrinsicNode {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl I32RemsIntrinsicNode {
+    pub fn new() -> I32RemsIntrinsicNode {
+        I32RemsIntrinsicNode {}
     }
 }
