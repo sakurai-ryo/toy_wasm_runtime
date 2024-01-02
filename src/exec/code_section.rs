@@ -166,6 +166,7 @@ pub enum Op {
     Loop = 0x03,
     Br = 0x0c,
     BrIf = 0x0d,
+    Call = 0x10,
     End = 0x0b,
 }
 impl Op {
@@ -185,6 +186,7 @@ impl Op {
             0x03 => Some(Op::Loop),
             0x0c => Some(Op::Br),
             0x0d => Some(Op::BrIf),
+            0x10 => Some(Op::Call),
             0x0b => Some(Op::End),
             _ => None,
         }
@@ -206,6 +208,7 @@ pub enum IntrinsicNode {
     LoopIntrinsicNode(LoopIntrinsicNode),
     BrIntrinsicNode(BrIntrinsicNode),
     BrIfIntrinsicNode(BrIfIntrinsicNode),
+    CallIntrinsicNode(CallIntrinsicNode),
 }
 impl IntrinsicNode {
     pub fn new(opcode: Op) -> IntrinsicNode {
@@ -223,6 +226,7 @@ impl IntrinsicNode {
             Op::Loop => IntrinsicNode::LoopIntrinsicNode(LoopIntrinsicNode::new()),
             Op::Br => IntrinsicNode::BrIntrinsicNode(BrIntrinsicNode::new()),
             Op::BrIf => IntrinsicNode::BrIfIntrinsicNode(BrIfIntrinsicNode::new()),
+            Op::Call => IntrinsicNode::CallIntrinsicNode(CallIntrinsicNode::new()),
             _ => panic!("Invalid opcode"), // TODO
         }
     }
@@ -242,6 +246,7 @@ impl IntrinsicNode {
             IntrinsicNode::LoopIntrinsicNode(l) => l.load(buf),
             IntrinsicNode::BrIntrinsicNode(b) => b.load(buf),
             IntrinsicNode::BrIfIntrinsicNode(b) => b.load(buf),
+            IntrinsicNode::CallIntrinsicNode(c) => c.load(buf),
         }
     }
 }
@@ -435,6 +440,11 @@ pub struct BlockIntrinsicNode {
     block_type: BlockType,
     expr: ExprNode,
 }
+impl Default for BlockIntrinsicNode {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl BlockIntrinsicNode {
     pub fn new() -> BlockIntrinsicNode {
         BlockIntrinsicNode {
@@ -459,6 +469,11 @@ impl BlockIntrinsicNode {
 pub struct LoopIntrinsicNode {
     block_type: BlockType,
     expr: ExprNode,
+}
+impl Default for LoopIntrinsicNode {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 impl LoopIntrinsicNode {
     pub fn new() -> LoopIntrinsicNode {
@@ -486,6 +501,11 @@ type LabelIdx = u32;
 pub struct BrIntrinsicNode {
     label_idx: LabelIdx,
 }
+impl Default for BrIntrinsicNode {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl BrIntrinsicNode {
     pub fn new() -> BrIntrinsicNode {
         BrIntrinsicNode { label_idx: 0 }
@@ -501,6 +521,11 @@ impl BrIntrinsicNode {
 pub struct BrIfIntrinsicNode {
     label_idx: LabelIdx,
 }
+impl Default for BrIfIntrinsicNode {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl BrIfIntrinsicNode {
     pub fn new() -> BrIfIntrinsicNode {
         BrIfIntrinsicNode { label_idx: 0 }
@@ -508,6 +533,28 @@ impl BrIfIntrinsicNode {
 
     pub fn load(&mut self, buf: &mut Buffer) -> Result<()> {
         self.label_idx = buf.read_u32()?;
+        Ok(())
+    }
+}
+
+type FuncIdx = u32;
+
+#[derive(Debug, Clone)]
+pub struct CallIntrinsicNode {
+    func_idx: FuncIdx,
+}
+impl Default for CallIntrinsicNode {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl CallIntrinsicNode {
+    pub fn new() -> CallIntrinsicNode {
+        CallIntrinsicNode { func_idx: 0 }
+    }
+
+    pub fn load(&mut self, buf: &mut Buffer) -> Result<()> {
+        self.func_idx = buf.read_u32()?;
         Ok(())
     }
 }
