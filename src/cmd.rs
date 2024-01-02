@@ -73,4 +73,15 @@ mod tests {
 
         assert!(module.sections.len() == 3);
     }
+
+    #[test]
+    fn test_exec_add() {
+        let path = PathBuf::from("examples/add.wasm");
+        let result = exec(ExecInput { path, print: false });
+        assert!(result.is_ok());
+
+        let module = result.unwrap();
+
+        assert!(module.sections.len() == 4);
+    }
 }
