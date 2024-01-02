@@ -3,14 +3,18 @@ use anyhow::{anyhow, Result};
 use crate::exec::buffer::Buffer;
 use crate::exec::type_section::{NumType, ValType};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Op {
+    LocalGet = 0x20,
+    LocalSet = 0x21,
     I32Const = 0x41,
     End = 0x0b,
 }
 impl Op {
     pub fn from_u8(value: u8) -> Option<Op> {
         match value {
+            0x20 => Some(Op::LocalGet),
+            0x21 => Some(Op::LocalSet),
             0x41 => Some(Op::I32Const),
             0x0b => Some(Op::End),
             _ => None,
@@ -18,6 +22,7 @@ impl Op {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct CodeSectionNode {
     codes: Vec<CodeNode>,
 }
@@ -43,6 +48,7 @@ impl CodeSectionNode {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct CodeNode {
     size: u32,
     func: FuncNode,
@@ -68,6 +74,7 @@ impl CodeNode {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct FuncNode {
     locals: Vec<LocalNode>,
     expr: ExprNode,
@@ -99,6 +106,7 @@ impl FuncNode {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct LocalNode {
     num: u32,
     val_type: ValType,
@@ -125,6 +133,7 @@ impl LocalNode {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct ExprNode {
     intrinsics: Vec<IntrinsicNode>,
 }
@@ -142,12 +151,13 @@ impl ExprNode {
 
     pub fn load(&mut self, buf: &mut Buffer) -> Result<()> {
         loop {
-            let op = buf.read_byte()?;
-            if op == Op::End as u8 {
+            let op_byte = buf.read_byte()?;
+            if op_byte == Op::End as u8 {
                 break;
             }
 
-            let mut intrinsic = IntrinsicNode::new(Op::I32Const);
+            let opcode = Op::from_u8(op_byte).ok_or(anyhow!("Invalid opcode: {}", op_byte))?;
+            let mut intrinsic = IntrinsicNode::new(opcode);
             intrinsic.load(buf)?;
             self.intrinsics.push(intrinsic);
         }
@@ -156,13 +166,18 @@ impl ExprNode {
     }
 }
 
+#[derive(Debug, Clone)]
 pub enum IntrinsicNode {
+    LocalGetIntrinsicNode,
+    LocalSetIntrinsicNode,
     I32ConstIntrinsicNode,
 }
 impl IntrinsicNode {
     pub fn new(opcode: Op) -> IntrinsicNode {
         match opcode {
             Op::I32Const => IntrinsicNode::I32ConstIntrinsicNode,
+            Op::LocalGet => IntrinsicNode::LocalGetIntrinsicNode,
+            Op::LocalSet => IntrinsicNode::LocalSetIntrinsicNode,
             _ => panic!("Invalid opcode"), // TODO
         }
     }
@@ -171,6 +186,16 @@ impl IntrinsicNode {
         match self {
             IntrinsicNode::I32ConstIntrinsicNode => {
                 let mut node = I32ConstIntrinsicNode::new();
+                node.load(buf)?;
+                Ok(())
+            }
+            IntrinsicNode::LocalGetIntrinsicNode => {
+                let mut node = LocalGetIntrinsicNode::new();
+                node.load(buf)?;
+                Ok(())
+            }
+            IntrinsicNode::LocalSetIntrinsicNode => {
+                let mut node = LocalSetIntrinsicNode::new();
                 node.load(buf)?;
                 Ok(())
             }
@@ -193,6 +218,44 @@ impl I32ConstIntrinsicNode {
 
     pub fn load(&mut self, buf: &mut Buffer) -> Result<()> {
         self.val = buf.read_i32()?;
+        Ok(())
+    }
+}
+
+pub struct LocalGetIntrinsicNode {
+    local_idx: u32,
+}
+impl Default for LocalGetIntrinsicNode {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl LocalGetIntrinsicNode {
+    pub fn new() -> LocalGetIntrinsicNode {
+        LocalGetIntrinsicNode { local_idx: 0 }
+    }
+
+    pub fn load(&mut self, buf: &mut Buffer) -> Result<()> {
+        self.local_idx = buf.read_u32()?;
+        Ok(())
+    }
+}
+
+pub struct LocalSetIntrinsicNode {
+    local_idx: u32,
+}
+impl Default for LocalSetIntrinsicNode {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl LocalSetIntrinsicNode {
+    pub fn new() -> LocalSetIntrinsicNode {
+        LocalSetIntrinsicNode { local_idx: 0 }
+    }
+
+    pub fn load(&mut self, buf: &mut Buffer) -> Result<()> {
+        self.local_idx = buf.read_u32()?;
         Ok(())
     }
 }

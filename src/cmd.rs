@@ -7,13 +7,23 @@ use crate::errors::ExecError;
 use crate::exec::buffer::Buffer;
 use crate::exec::module::ModuleNode;
 
-pub fn exec(path: PathBuf) -> Result<ModuleNode> {
-    let file = fs::read(&path);
+pub struct ExecInput {
+    pub path: PathBuf,
+    pub print: bool,
+}
+
+pub fn exec(input: ExecInput) -> Result<ModuleNode> {
+    let file = fs::read(&input.path);
     let file_content = match file {
         Ok(file) => file,
         Err(e) => {
             if e.kind() == ErrorKind::NotFound {
-                let p = path.file_name().unwrap().to_string_lossy().into_owned();
+                let p = input
+                    .path
+                    .file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .into_owned();
                 return Err(ExecError::FileNotFound(p).into());
             }
             return Err(ExecError::Unknown.into());
@@ -24,9 +34,17 @@ pub fn exec(path: PathBuf) -> Result<ModuleNode> {
     let mut module = ModuleNode::new();
     module.load(&mut buffer)?;
 
-    println!("{:#?}", module);
+    if input.print {
+        print_module(module.clone());
+    }
 
     return Ok(module);
+}
+
+fn print_module(module: ModuleNode) {
+    println!("Magic: {:#?}", module.magic);
+    println!("Version: {:#?}", module.version);
+    println!("Sections: {:#?}", module.sections);
 }
 
 #[cfg(test)]
@@ -35,9 +53,20 @@ mod tests {
     use std::path::PathBuf;
 
     #[test]
-    fn test_exec() {
+    fn test_exec_const() {
         let path = PathBuf::from("examples/const.wasm");
-        let result = exec(path);
+        let result = exec(ExecInput { path, print: false });
+        assert!(result.is_ok());
+
+        let module = result.unwrap();
+
+        assert!(module.sections.len() == 3);
+    }
+
+    #[test]
+    fn test_exec_local_var() {
+        let path = PathBuf::from("examples/local_var.wasm");
+        let result = exec(ExecInput { path, print: false });
         assert!(result.is_ok());
 
         let module = result.unwrap();

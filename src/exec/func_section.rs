@@ -4,6 +4,7 @@ use crate::exec::buffer::Buffer;
 
 type TypeIdx = u32;
 
+#[derive(Debug, Clone)]
 pub struct FunctionSectionNode {
     type_indices: Vec<TypeIdx>,
 }

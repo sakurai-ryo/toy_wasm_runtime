@@ -3,7 +3,7 @@ use anyhow::{anyhow, Result};
 use crate::exec::buffer::Buffer;
 use crate::exec::section::SectionNode;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ModuleNode {
     /// https://webassembly.github.io/spec/core/binary/modules.html#binary-magic
     pub magic: Vec<u8>,
@@ -53,7 +53,7 @@ impl ModuleNode {
         let section_size = buf.read_u32()?;
         let mut section_buf = buf.read_buffer(section_size)?;
 
-        let section = SectionNode::create(section_id)?;
+        let mut section = SectionNode::create(section_id)?;
         section.load(&mut section_buf)?;
 
         Ok(section)

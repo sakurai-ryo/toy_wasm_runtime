@@ -6,7 +6,7 @@ const I32: u8 = 0x7f;
 const I64: u8 = 0x7e;
 const F32: u8 = 0x7d;
 const F64: u8 = 0x7c;
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum NumType {
     I32(u8),
     I64(u8),
@@ -28,7 +28,7 @@ impl NumType {
 const FuncRef: u8 = 0x70;
 const ExternRef: u8 = 0x6f;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum RefType {
     FuncRef(u8),
     ExternRef(u8),
@@ -43,7 +43,7 @@ impl RefType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ValType {
     NumType(NumType),
     RefType(RefType),
@@ -58,7 +58,7 @@ impl ValType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TypeSectionNode {
     func_types: Vec<FunctionTypeNode>,
 }
@@ -85,7 +85,7 @@ impl TypeSectionNode {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FunctionTypeNode {
     param_type: ResultTypeNode,
     result_type: ResultTypeNode,
@@ -120,7 +120,7 @@ impl FunctionTypeNode {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ResultTypeNode {
     val_types: Vec<ValType>,
 }
