@@ -117,6 +117,7 @@ impl LocalNode {
 #[derive(Debug, Clone)]
 pub struct ExprNode {
     intrinsics: Vec<IntrinsicNode>,
+    end_op: Option<Op>,
 }
 impl Default for ExprNode {
     fn default() -> Self {
@@ -127,13 +128,15 @@ impl ExprNode {
     pub fn new() -> ExprNode {
         ExprNode {
             intrinsics: Vec::new(),
+            end_op: None,
         }
     }
 
     pub fn load(&mut self, buf: &mut Buffer) -> Result<()> {
         loop {
             let op_byte = buf.read_byte()?;
-            if op_byte == Op::End as u8 {
+            if op_byte == Op::End as u8 || op_byte == Op::Else as u8 {
+                self.end_op = Op::from_u8(op_byte);
                 break;
             }
 
@@ -157,6 +160,8 @@ pub enum Op {
     I32GeS = 0x4e,
     I32Add = 0x6a,
     I32Rems = 0x6f,
+    If = 0x04,
+    Else = 0x05,
     End = 0x0b,
 }
 impl Op {
@@ -170,6 +175,8 @@ impl Op {
             0x4e => Some(Op::I32GeS),
             0x6a => Some(Op::I32Add),
             0x6f => Some(Op::I32Rems),
+            0x04 => Some(Op::If),
+            0x05 => Some(Op::Else),
             0x0b => Some(Op::End),
             _ => None,
         }
@@ -186,6 +193,7 @@ pub enum IntrinsicNode {
     I32GeSIntrinsicNode(I32GeSIntrinsicNode),
     I32AddIntrinsicNode(I32AddIntrinsicNode),
     I32RemsIntrinsicNode(I32RemsIntrinsicNode),
+    IfIntrinsicNode(IfIntrinsicNode),
 }
 impl IntrinsicNode {
     pub fn new(opcode: Op) -> IntrinsicNode {
@@ -198,6 +206,7 @@ impl IntrinsicNode {
             Op::I32GeS => IntrinsicNode::I32GeSIntrinsicNode(I32GeSIntrinsicNode::new()),
             Op::I32Add => IntrinsicNode::I32AddIntrinsicNode(I32AddIntrinsicNode::new()),
             Op::I32Rems => IntrinsicNode::I32RemsIntrinsicNode(I32RemsIntrinsicNode::new()),
+            Op::If => IntrinsicNode::IfIntrinsicNode(IfIntrinsicNode::new()),
             _ => panic!("Invalid opcode"), // TODO
         }
     }
@@ -212,6 +221,7 @@ impl IntrinsicNode {
             IntrinsicNode::I32GeSIntrinsicNode(_) => Ok(()),
             IntrinsicNode::I32AddIntrinsicNode(_) => Ok(()),
             IntrinsicNode::I32RemsIntrinsicNode(_) => Ok(()),
+            IntrinsicNode::IfIntrinsicNode(i) => i.load(buf),
         }
     }
 }
@@ -338,5 +348,62 @@ impl Default for I32RemsIntrinsicNode {
 impl I32RemsIntrinsicNode {
     pub fn new() -> I32RemsIntrinsicNode {
         I32RemsIntrinsicNode {}
+    }
+}
+
+pub type S33 = u32;
+
+#[derive(Debug, Clone)]
+pub enum BlockType {
+    Empty,
+    ValType(ValType),
+    S33(S33),
+}
+impl BlockType {
+    pub fn from_u8(value: u8) -> Option<BlockType> {
+        match value {
+            0x40 => Some(BlockType::Empty),
+            _ => {
+                let val_type = ValType::from_u8(value)?;
+                Some(BlockType::ValType(val_type))
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct IfIntrinsicNode {
+    block_type: BlockType,
+    then_expr: ExprNode,
+    else_expr: ExprNode,
+}
+impl Default for IfIntrinsicNode {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl IfIntrinsicNode {
+    pub fn new() -> IfIntrinsicNode {
+        IfIntrinsicNode {
+            block_type: BlockType::Empty,
+            then_expr: ExprNode::new(),
+            else_expr: ExprNode::new(),
+        }
+    }
+
+    pub fn load(&mut self, buf: &mut Buffer) -> Result<()> {
+        let byte = buf.read_byte()?;
+        self.block_type =
+            BlockType::from_u8(byte).ok_or(anyhow!("Invalid block type: {}", byte))?;
+
+        self.then_expr = ExprNode::new();
+        self.then_expr.load(buf)?;
+
+        if self.then_expr.end_op == Some(Op::Else) {
+            self.else_expr = ExprNode::new();
+            self.else_expr.load(buf)?;
+        }
+
+        Ok(())
     }
 }
