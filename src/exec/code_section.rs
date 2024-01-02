@@ -168,41 +168,30 @@ impl ExprNode {
 
 #[derive(Debug, Clone)]
 pub enum IntrinsicNode {
-    LocalGetIntrinsicNode,
-    LocalSetIntrinsicNode,
-    I32ConstIntrinsicNode,
+    LocalGetIntrinsicNode(LocalGetIntrinsicNode),
+    LocalSetIntrinsicNode(LocalSetIntrinsicNode),
+    I32ConstIntrinsicNode(I32ConstIntrinsicNode),
 }
 impl IntrinsicNode {
     pub fn new(opcode: Op) -> IntrinsicNode {
         match opcode {
-            Op::I32Const => IntrinsicNode::I32ConstIntrinsicNode,
-            Op::LocalGet => IntrinsicNode::LocalGetIntrinsicNode,
-            Op::LocalSet => IntrinsicNode::LocalSetIntrinsicNode,
+            Op::I32Const => IntrinsicNode::I32ConstIntrinsicNode(I32ConstIntrinsicNode::new()),
+            Op::LocalGet => IntrinsicNode::LocalGetIntrinsicNode(LocalGetIntrinsicNode::new()),
+            Op::LocalSet => IntrinsicNode::LocalSetIntrinsicNode(LocalSetIntrinsicNode::new()),
             _ => panic!("Invalid opcode"), // TODO
         }
     }
 
     pub fn load(&mut self, buf: &mut Buffer) -> Result<()> {
         match self {
-            IntrinsicNode::I32ConstIntrinsicNode => {
-                let mut node = I32ConstIntrinsicNode::new();
-                node.load(buf)?;
-                Ok(())
-            }
-            IntrinsicNode::LocalGetIntrinsicNode => {
-                let mut node = LocalGetIntrinsicNode::new();
-                node.load(buf)?;
-                Ok(())
-            }
-            IntrinsicNode::LocalSetIntrinsicNode => {
-                let mut node = LocalSetIntrinsicNode::new();
-                node.load(buf)?;
-                Ok(())
-            }
+            IntrinsicNode::I32ConstIntrinsicNode(i) => i.load(buf),
+            IntrinsicNode::LocalGetIntrinsicNode(l) => l.load(buf),
+            IntrinsicNode::LocalSetIntrinsicNode(l) => l.load(buf),
         }
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct I32ConstIntrinsicNode {
     val: i32,
 }
@@ -222,6 +211,7 @@ impl I32ConstIntrinsicNode {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct LocalGetIntrinsicNode {
     local_idx: u32,
 }
@@ -241,6 +231,7 @@ impl LocalGetIntrinsicNode {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct LocalSetIntrinsicNode {
     local_idx: u32,
 }
